@@ -59,17 +59,20 @@ const useSemiPersistentState = (key, initialState) => {
 const App = () => {
 
   const [searchTerm, setSearchTerm] = useSemiPersistentState('search', '');
+
+  const [url, setUrl] = React.useState(
+    `${API_ENDPOINT}${searchTerm}`
+  );
+
   const [stories, dispatchStories] = React.useReducer(
     storiesReducer,
     {data: [], isLoading: false, isError: false}
   )
 
-  React.useEffect(() => {
-    if (!searchTerm) return;
-
+  const handleFetchStories = React.useCallback(() => {
     dispatchStories({type: Action.StoriesFetchInit});
 
-    fetch(`${API_ENDPOINT}${searchTerm}`)
+    fetch(url)
     .then((response) => response.json())
     .then(result => {
       dispatchStories({
@@ -80,7 +83,12 @@ const App = () => {
     .catch(() =>
       dispatchStories({type: Action.StoriesFetchFailure})
     );
-  }, [searchTerm])
+  }, [url])
+
+  React.useEffect(() => {
+    handleFetchStories();
+
+  }, [handleFetchStories]);
 
   const handleRemoveStory = item => {
     dispatchStories({
@@ -89,27 +97,24 @@ const App = () => {
     });
   }
 
-  const handleSearch = (event) => {
+  const handleSearchInput = event => {
     setSearchTerm(event.target.value);
-  }
+  };
 
-  /*
-  const searchedStories = stories.data.filter(story => 
-    story.title.toLowerCase().includes(searchTerm));
-  */
+  const handleSearchSubmit = event => {
+    setUrl(`${API_ENDPOINT}${searchTerm}`);
+    event.preventDefault();
+  };
 
   return(
     <div>
       <h1>My Hacker Stories</h1>
 
-      <InputWithLabel
-        id="search"
-        value={searchTerm}
-        isFocused
-        onInputChange={handleSearch}
-      >
-        <strong>Search:</strong>
-      </InputWithLabel>
+    <SearchForm
+      searchTerm={searchTerm}
+      onSearchInput={handleSearchInput}
+      onSearchSubmit={handleSearchSubmit}
+    />
 
       <hr />
 
@@ -187,6 +192,27 @@ const InputWithLabel = ({
       />
     </>
   )
+}
+
+const SearchForm = ({
+  searchTerm,
+  onSearchInput,
+  onSearchSubmit,
+}) => {
+  <form onSubmit={onSearchSubmit}>
+    <InputWithLabel
+      id="search"
+      value={searchTerm}
+      isFocused
+      onInputChange={onSearchInput}
+    >
+      <strong>Search:</strong>
+    </InputWithLabel>
+
+    <button type="submit" disabled={!searchTerm}>
+      Submit
+    </button>
+  </form>
 }
 
 export default App;
